@@ -61,7 +61,7 @@ def error_message() -> None:
 
 root = Tk()
 root.title("Bloodborne Save Manager")
-# root.geometry("300x150")
+root.iconbitmap("images/bsm_icon.ico")
 root.resizable(False, False)
 
 mainframe = ttk.Frame(root, padding=(5, 10, 5, 10))
