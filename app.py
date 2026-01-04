@@ -1,4 +1,6 @@
+import os
 import shutil
+import sys
 from pathlib import Path
 from tkinter import *
 from tkinter import ttk
@@ -7,7 +9,7 @@ import winsound
 from pynput import keyboard
 from PIL import Image, ImageTk
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 
 # The utility should be in the BB save data directory, this logic will change in the future
 SAVE_DIR = Path.cwd()
@@ -59,9 +61,22 @@ def error_message() -> None:
     root.after(2000, lambda: status_label.config(text=""))
 
 
+def resource_path(relative_path: str) -> str:
+    """
+    Returns the absolute path to resource, works for dev and for PyInstaller.
+    """
+    try:
+        # PyInstaller creates a temporary folder and stores the path in _MEIPASS
+        base_path = sys._MEIPASS
+    except AttributeError:
+        # If we run just a .py file, we use the current directory
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+
 root = Tk()
 root.title("Bloodborne Save Manager")
-root.iconbitmap("images/bsm_icon.ico")
+root.iconbitmap(resource_path("images/bsm_icon.ico"))
 root.resizable(False, False)
 
 mainframe = ttk.Frame(root, padding=(5, 10, 5, 10))
@@ -70,7 +85,7 @@ mainframe.grid(column=0, row=0, sticky="N W E S")
 button_frame = ttk.Frame(root, padding=(50, 10, 50, 10))
 button_frame.grid(column=0, row=1, sticky="N W E S")
 
-logo_open = Image.open("images/bsm_logo.jpg")
+logo_open = Image.open(resource_path("images/bsm_logo.jpg"))
 logo_resized = logo_open.resize((300, 100))
 logo_tk = ImageTk.PhotoImage(logo_resized)
 
