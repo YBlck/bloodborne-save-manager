@@ -5,6 +5,7 @@ from tkinter import ttk
 
 import winsound
 from pynput import keyboard
+from PIL import Image, ImageTk
 
 VERSION = "0.1.0"
 
@@ -59,21 +60,25 @@ def error_message() -> None:
 
 
 root = Tk()
-root.title("BB savefiles backup")
-root.geometry("300x150")
+root.title("Bloodborne Save Manager")
+# root.geometry("300x150")
 root.resizable(False, False)
 
-mainframe = ttk.Frame(root, padding=(10, 10, 10, 10))
+mainframe = ttk.Frame(root, padding=(5, 10, 5, 10))
 mainframe.grid(column=0, row=0, sticky="N W E S")
 
-button_frame = ttk.Frame(root, padding=(50, 10, 50, 20))
+button_frame = ttk.Frame(root, padding=(50, 10, 50, 10))
 button_frame.grid(column=0, row=1, sticky="N W E S")
 
+logo_open = Image.open("images/bsm_logo.jpg")
+logo_resized = logo_open.resize((300, 100))
+logo_tk = ImageTk.PhotoImage(logo_resized)
+
 key_info = "Press F5 to backup save files\nPress F8 to restore save files"
-ttk.Label(mainframe, text=key_info).grid(column=1, row=0, columnspan=2)
+ttk.Label(mainframe, text=key_info, image=logo_tk, compound="top").grid(column=1, row=0, columnspan=2)
 
 status_label = Label(mainframe, text="")
-status_label.grid(column=1, row=1, columnspan=2, pady=15)
+status_label.grid(column=1, row=1, columnspan=2, pady=10)
 
 ttk.Button(button_frame, text="BackUp", command=backup_save).grid(
     column=1, row=2, sticky=W
