@@ -11,29 +11,35 @@ from PIL import Image, ImageTk
 from pynput import keyboard
 
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
 CONFIG = configparser.ConfigParser()
 CONFIG_FILE = "config.ini"
 
 if not os.path.exists(CONFIG_FILE):
-    CONFIG["hotkeys"] = {"backup": "f5", "restore": "f8", "exit": "f12"}
+    CONFIG["settings"] = {
+        "cusa": "CUSA00207",
+        "path": Path.cwd(),
+        "backup": "f5",
+        "restore": "f8",
+        "exit": "f12"
+    }
 
-    with open(CONFIG_FILE, "w") as configfile:
-        CONFIG.write(configfile)
+    with open(CONFIG_FILE, "w") as file:
+        CONFIG.write(file)
 else:
     CONFIG.read(CONFIG_FILE)
 
 
 # The utility should be in the BB save data directory, this logic will change in the future
-SAVE_DIR = Path.cwd()
-BB_CUSA = "CUSA00207"
+SAVE_DIR = Path(CONFIG.get("settings", "path", fallback=Path.cwd()))
+BB_CUSA = CONFIG.get("settings", "cusa", fallback="CUSA00207")
 BACKUP_DIR = SAVE_DIR / (BB_CUSA + "_backup")
 
 HOTKEYS = {
-    "backup": CONFIG.get("hotkeys", "backup", fallback="f5"),
-    "restore": CONFIG.get("hotkeys", "restore", fallback="f8"),
-    "exit": CONFIG.get("hotkeys", "exit", fallback="f12"),
+    "backup": CONFIG.get("settings", "backup", fallback="f5"),
+    "restore": CONFIG.get("settings", "restore", fallback="f8"),
+    "exit": CONFIG.get("settings", "exit", fallback="f12"),
 }
 
 
