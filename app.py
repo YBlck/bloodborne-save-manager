@@ -10,10 +10,20 @@ import winsound
 from PIL import Image, ImageTk
 from pynput import keyboard
 
+
 VERSION = "0.2.0"
 
 CONFIG = configparser.ConfigParser()
-CONFIG.read("config.ini")
+CONFIG_FILE = "config.ini"
+
+if not os.path.exists(CONFIG_FILE):
+    CONFIG["hotkeys"] = {"backup": "f5", "restore": "f8", "exit": "f12"}
+
+    with open(CONFIG_FILE, "w") as configfile:
+        CONFIG.write(configfile)
+else:
+    CONFIG.read(CONFIG_FILE)
+
 
 # The utility should be in the BB save data directory, this logic will change in the future
 SAVE_DIR = Path.cwd()
@@ -99,8 +109,10 @@ logo_open = Image.open(resource_path("images/bsm_logo.jpg"))
 logo_resized = logo_open.resize((300, 100))
 logo_tk = ImageTk.PhotoImage(logo_resized)
 
-key_info = (f"Press '{HOTKEYS["backup"].upper()}' to backup save files\n"
-            f"Press '{HOTKEYS["restore"].upper()}' to restore save files")
+key_info = (
+    f"Press '{HOTKEYS["backup"].upper()}' to backup save files\n"
+    f"Press '{HOTKEYS["restore"].upper()}' to restore save files"
+)
 ttk.Label(mainframe, text=key_info, image=logo_tk, compound="top").grid(
     column=1, row=0, columnspan=2
 )
