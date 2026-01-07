@@ -1,3 +1,4 @@
+import configparser
 import os
 import shutil
 import sys
@@ -6,15 +7,38 @@ from tkinter import *
 from tkinter import ttk
 
 import winsound
-from pynput import keyboard
 from PIL import Image, ImageTk
+from pynput import keyboard
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
-# The utility should be in the BB save data directory, this logic will change in the future
-SAVE_DIR = Path.cwd()
-BB_CUSA = "CUSA00207"
+CONFIG = configparser.ConfigParser()
+CONFIG_FILE = "config.ini"
+
+if not os.path.exists(CONFIG_FILE):
+    CONFIG["settings"] = {
+        "cusa": "CUSA00207",
+        "path": Path.cwd(),
+        "backup": "f5",
+        "restore": "f8",
+        "exit": "f12"
+    }
+
+    with open(CONFIG_FILE, "w") as file:
+        CONFIG.write(file)
+else:
+    CONFIG.read(CONFIG_FILE)
+
+
+SAVE_DIR = Path(CONFIG.get("settings", "path", fallback=Path.cwd()))
+BB_CUSA = CONFIG.get("settings", "cusa", fallback="CUSA00207")
 BACKUP_DIR = SAVE_DIR / (BB_CUSA + "_backup")
+
+HOTKEYS = {
+    "backup": CONFIG.get("settings", "backup", fallback="f5"),
+    "restore": CONFIG.get("settings", "restore", fallback="f8"),
+    "exit": CONFIG.get("settings", "exit", fallback="f12"),
+}
 
 
 def backup_save() -> None:
@@ -89,8 +113,13 @@ logo_open = Image.open(resource_path("images/bsm_logo.jpg"))
 logo_resized = logo_open.resize((300, 100))
 logo_tk = ImageTk.PhotoImage(logo_resized)
 
-key_info = "Press F5 to backup save files\nPress F8 to restore save files"
-ttk.Label(mainframe, text=key_info, image=logo_tk, compound="top").grid(column=1, row=0, columnspan=2)
+key_info = (
+    f"Press '{HOTKEYS["backup"].upper()}' to backup save files\n"
+    f"Press '{HOTKEYS["restore"].upper()}' to restore save files"
+)
+ttk.Label(mainframe, text=key_info, image=logo_tk, compound="top").grid(
+    column=1, row=0, columnspan=2
+)
 
 status_label = Label(mainframe, text="")
 status_label.grid(column=1, row=1, columnspan=2, pady=10)
@@ -108,19 +137,26 @@ mainframe.columnconfigure(2, weight=1)
 button_frame.columnconfigure(2, weight=1)
 
 
-def on_press(key: keyboard.Key) -> None:
+def on_press(key_in: keyboard.Key | keyboard.KeyCode) -> None:
     """
     Listens for special key presses on the keyboard.
 
+    Default keys:
     F5 - backups the specified CUSA folder.
     F6 - restores the specified CUSA folder.
     F12 - closes the application.
     """
-    if key == keyboard.Key.f5:
+    key = (
+        key_in.name
+        if hasattr(key_in, "name")
+        else str(key_in).replace("'", "")
+    )
+
+    if key.lower() == HOTKEYS["backup"].lower():
         backup_save()
-    elif key == keyboard.Key.f8:
+    elif key.lower() == HOTKEYS["restore"].lower():
         restore_save()
-    elif key == keyboard.Key.f12:
+    elif key.lower() == HOTKEYS["exit"].lower():
         root.destroy()
     return None
 
