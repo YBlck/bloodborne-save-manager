@@ -10,7 +10,6 @@ import winsound
 from PIL import Image, ImageTk
 from pynput import keyboard
 
-
 VERSION = "0.3.0"
 
 CONFIG = configparser.ConfigParser()
@@ -31,7 +30,6 @@ else:
     CONFIG.read(CONFIG_FILE)
 
 
-# The utility should be in the BB save data directory, this logic will change in the future
 SAVE_DIR = Path(CONFIG.get("settings", "path", fallback=Path.cwd()))
 BB_CUSA = CONFIG.get("settings", "cusa", fallback="CUSA00207")
 BACKUP_DIR = SAVE_DIR / (BB_CUSA + "_backup")
