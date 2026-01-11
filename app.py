@@ -99,6 +99,20 @@ def resource_path(relative_path: str) -> str:
 
 
 def settings() -> None:
+    """
+    Opens a modal application settings window.
+
+    This window allows the user to:
+    1. Change the path to the save folder via explorer.
+    2. Specify a unique Game ID (CUSA).
+    3. Assign hotkeys (F1-F12) for Backup, Restore and Exit.
+
+    Implementation features:
+    - Uses `grab_set()` to block interaction with the main window.
+    - Dynamically updates Combobox lists to prevent selecting the same keys.
+    - When saving, updates `config.ini` and initiates an application restart
+    to apply the changes.
+    """
     settings_window = Toplevel()
     settings_window.title("Settings")
     settings_window.iconbitmap(resource_path("images/bsm_settings.ico"))
