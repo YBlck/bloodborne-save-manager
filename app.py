@@ -4,24 +4,24 @@ import shutil
 import sys
 from pathlib import Path
 from tkinter import *
-from tkinter import ttk
+from tkinter import ttk, filedialog
 
 import winsound
 from PIL import Image, ImageTk
 from pynput import keyboard
 
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 
 CONFIG = configparser.ConfigParser()
 CONFIG_FILE = "config.ini"
 
 if not os.path.exists(CONFIG_FILE):
     CONFIG["settings"] = {
-        "cusa": "CUSA00207",
+        "id": "CUSA00207",
         "path": Path.cwd(),
         "backup": "f5",
         "restore": "f8",
-        "exit": "f12"
+        "exit": "f12",
     }
 
     with open(CONFIG_FILE, "w") as file:
@@ -31,8 +31,8 @@ else:
 
 
 SAVE_DIR = Path(CONFIG.get("settings", "path", fallback=Path.cwd()))
-BB_CUSA = CONFIG.get("settings", "cusa", fallback="CUSA00207")
-BACKUP_DIR = SAVE_DIR / (BB_CUSA + "_backup")
+GAME_ID = CONFIG.get("settings", "id", fallback="CUSA00207")
+BACKUP_DIR = SAVE_DIR / (GAME_ID + "_backup")
 
 HOTKEYS = {
     "backup": CONFIG.get("settings", "backup", fallback="f5"),
@@ -50,7 +50,7 @@ def backup_save() -> None:
     source files are missing.
     """
     try:
-        shutil.copytree(SAVE_DIR / BB_CUSA, BACKUP_DIR, dirs_exist_ok=True)
+        shutil.copytree(SAVE_DIR / GAME_ID, BACKUP_DIR, dirs_exist_ok=True)
         success_message("Files backed up successfully")
     except FileNotFoundError:
         error_message()
@@ -65,7 +65,7 @@ def restore_save() -> None:
     backup files are missing.
     """
     try:
-        shutil.copytree(BACKUP_DIR, SAVE_DIR / BB_CUSA, dirs_exist_ok=True)
+        shutil.copytree(BACKUP_DIR, SAVE_DIR / GAME_ID, dirs_exist_ok=True)
         success_message("Files restored successfully")
     except FileNotFoundError:
         error_message()
@@ -98,6 +98,127 @@ def resource_path(relative_path: str) -> str:
     return os.path.join(base_path, relative_path)
 
 
+def settings() -> None:
+    settings_window = Toplevel()
+    settings_window.title("Settings")
+    settings_window.iconbitmap(resource_path("images/bsm_settings.ico"))
+    settings_window.resizable(False, False)
+    settings_window.grab_set()
+    settings_window.columnconfigure(0, weight=1)
+
+    # Save game path and game ID configuration
+    settings_window.save_path = StringVar(value=str(SAVE_DIR))
+    settings_window.game_id = StringVar(value=GAME_ID)
+
+    path_frame = ttk.Frame(settings_window, padding=(5, 10, 5, 10))
+    path_frame.grid(column=0, row=0, sticky="N W E S")
+    path_frame.columnconfigure(1, weight=1)
+
+    ttk.Label(path_frame, text="Saves dir:", width=10).grid(
+        column=0, row=0, sticky="E", padx=2
+    )
+    path_entry = ttk.Entry(path_frame, textvariable=settings_window.save_path)
+    path_entry.grid(column=1, row=0, sticky="W E")
+
+    ttk.Label(path_frame, text="Game ID:", width=10).grid(
+        column=0, row=1, sticky="E", padx=2
+    )
+    game_id_entry = ttk.Entry(path_frame, textvariable=settings_window.game_id)
+    game_id_entry.grid(column=1, row=1, sticky="W E")
+
+    def browse_folder() -> None:
+        selected_directory = filedialog.askdirectory()
+        if selected_directory:
+            settings_window.save_path.set(selected_directory)
+
+    ttk.Button(path_frame, text="Browse", command=browse_folder).grid(
+        column=2, row=0, sticky="W"
+    )
+
+    # Hotkeys configuration
+    hotkeys_frame = ttk.Frame(settings_window, padding=(5, 10, 5, 10))
+    hotkeys_frame.grid(column=0, row=1, sticky="N W E S")
+    hotkeys_frame.columnconfigure((1, 3, 5), weight=1)
+
+    settings_window.backup_var = StringVar(value=HOTKEYS["backup"].upper())
+    settings_window.restore_var = StringVar(value=HOTKEYS["restore"].upper())
+    settings_window.exit_var = StringVar(value=HOTKEYS["exit"].upper())
+
+    f_keys = [f"F{num}" for num in range(1, 13)]
+
+    def update_menus(event=None) -> None:
+        b = settings_window.backup_var.get()
+        r = settings_window.restore_var.get()
+        e = settings_window.exit_var.get()
+
+        backup_combo["values"] = [k for k in f_keys if k not in [r, e]]
+        restore_combo["values"] = [k for k in f_keys if k not in [b, e]]
+        exit_combo["values"] = [k for k in f_keys if k not in [b, r]]
+
+    ttk.Label(hotkeys_frame, text="Backup:").grid(column=0, row=0, padx=2)
+    backup_combo = ttk.Combobox(
+        hotkeys_frame,
+        textvariable=settings_window.backup_var,
+        width=5,
+        state="readonly",
+    )
+    backup_combo.grid(column=1, row=0, padx=5)
+
+    ttk.Label(hotkeys_frame, text="Restore:").grid(column=2, row=0, padx=2)
+    restore_combo = ttk.Combobox(
+        hotkeys_frame,
+        textvariable=settings_window.restore_var,
+        width=5,
+        state="readonly",
+    )
+    restore_combo.grid(column=3, row=0, padx=5)
+
+    ttk.Label(hotkeys_frame, text="Exit:").grid(column=4, row=0, padx=2)
+    exit_combo = ttk.Combobox(
+        hotkeys_frame,
+        textvariable=settings_window.exit_var,
+        width=5,
+        state="readonly",
+    )
+    exit_combo.grid(column=5, row=0, padx=5)
+
+    backup_combo.bind("<<ComboboxSelected>>", update_menus)
+    restore_combo.bind("<<ComboboxSelected>>", update_menus)
+    exit_combo.bind("<<ComboboxSelected>>", update_menus)
+
+    update_menus()
+
+    def save_settings() -> None:
+        CONFIG["settings"] = {
+            "id": settings_window.game_id.get(),
+            "path": settings_window.save_path.get(),
+            "backup": settings_window.backup_var.get(),
+            "restore": settings_window.restore_var.get(),
+            "exit": settings_window.exit_var.get(),
+        }
+
+        with open(CONFIG_FILE, "w") as settingsfile:
+            CONFIG.write(settingsfile)
+
+        settings_window.destroy()
+
+        os.execl(sys.executable, sys.executable, *sys.argv)
+
+    # Buttons
+    btn_frame = ttk.Frame(settings_window, padding=(5, 10, 5, 5))
+    btn_frame.grid(column=0, row=2, sticky="W E")
+    btn_frame.columnconfigure(0, weight=1)
+    btn_frame.columnconfigure(1, weight=1)
+
+    btn_ok = ttk.Button(btn_frame, text="OK", command=save_settings)
+    btn_ok.grid(column=0, row=2, pady=10, padx=10, sticky="E")
+
+    btn_cancel = ttk.Button(
+        btn_frame, text="Cancel", command=settings_window.destroy
+    )
+    btn_cancel.grid(column=1, row=2, pady=10, padx=10, sticky="W")
+
+
 root = Tk()
 root.title("Bloodborne Save Manager")
 root.iconbitmap(resource_path("images/bsm_icon.ico"))
@@ -106,7 +227,7 @@ root.resizable(False, False)
 mainframe = ttk.Frame(root, padding=(5, 10, 5, 10))
 mainframe.grid(column=0, row=0, sticky="N W E S")
 
-button_frame = ttk.Frame(root, padding=(50, 10, 50, 10))
+button_frame = ttk.Frame(root, padding=(30, 10, 30, 10))
 button_frame.grid(column=0, row=1, sticky="N W E S")
 
 logo_open = Image.open(resource_path("images/bsm_logo.jpg"))
@@ -125,10 +246,13 @@ status_label = Label(mainframe, text="")
 status_label.grid(column=1, row=1, columnspan=2, pady=10)
 
 ttk.Button(button_frame, text="BackUp", command=backup_save).grid(
-    column=1, row=2, sticky=W
+    column=1, row=2, sticky="W"
 )
 ttk.Button(button_frame, text="Restore", command=restore_save).grid(
-    column=2, row=2, sticky=E
+    column=2, row=2
+)
+ttk.Button(button_frame, text="Settings", command=settings).grid(
+    column=3, row=2, sticky="E"
 )
 
 root.columnconfigure(0, weight=1)
