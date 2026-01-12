@@ -2,9 +2,10 @@ import configparser
 import os
 import shutil
 import sys
+from configparser import NoOptionError
 from pathlib import Path
 from tkinter import *
-from tkinter import ttk, filedialog
+from tkinter import ttk, filedialog, messagebox
 
 import winsound
 from PIL import Image, ImageTk
@@ -14,8 +15,46 @@ VERSION = "0.4.0"
 
 CONFIG = configparser.ConfigParser()
 CONFIG_FILE = "config.ini"
+SAVE_DIR = Path()
+GAME_ID = str()
+BACKUP_DIR = Path()
+HOTKEYS = dict()
 
-if not os.path.exists(CONFIG_FILE):
+
+def load_config() -> None:
+    global SAVE_DIR, GAME_ID, BACKUP_DIR, HOTKEYS
+
+    try:
+        if not os.path.exists(CONFIG_FILE):
+            create_default_config()
+
+        CONFIG.read(CONFIG_FILE)
+
+        SAVE_DIR = Path(CONFIG.get("settings", "path"))
+        GAME_ID = CONFIG.get("settings", "id")
+        BACKUP_DIR = SAVE_DIR / (GAME_ID + "_backup")
+
+        HOTKEYS = {
+            "backup": CONFIG.get("settings", "backup"),
+            "restore": CONFIG.get("settings", "restore"),
+            "exit": CONFIG.get("settings", "exit"),
+        }
+
+        key_info = (
+            f"Press '{HOTKEYS['backup'].upper()}' to backup save files\n"
+            f"Press '{HOTKEYS['restore'].upper()}' to restore save files"
+        )
+        info_label.config(text=key_info)
+
+    except NoOptionError as e:
+        messagebox.showerror(
+            "Critical Error",
+            f"Failed to load settings:\n{e}.\n"
+            f"Delete configuration file and try again.",
+        )
+
+
+def create_default_config() -> None:
     CONFIG["settings"] = {
         "id": "CUSA00207",
         "path": Path.cwd(),
@@ -26,19 +65,6 @@ if not os.path.exists(CONFIG_FILE):
 
     with open(CONFIG_FILE, "w") as file:
         CONFIG.write(file)
-else:
-    CONFIG.read(CONFIG_FILE)
-
-
-SAVE_DIR = Path(CONFIG.get("settings", "path", fallback=Path.cwd()))
-GAME_ID = CONFIG.get("settings", "id", fallback="CUSA00207")
-BACKUP_DIR = SAVE_DIR / (GAME_ID + "_backup")
-
-HOTKEYS = {
-    "backup": CONFIG.get("settings", "backup", fallback="f5"),
-    "restore": CONFIG.get("settings", "restore", fallback="f8"),
-    "exit": CONFIG.get("settings", "exit", fallback="f12"),
-}
 
 
 def backup_save() -> None:
@@ -98,7 +124,7 @@ def resource_path(relative_path: str) -> str:
     return os.path.join(base_path, relative_path)
 
 
-def settings() -> None:
+def open_settings_window() -> None:
     """
     Opens a modal application settings window.
 
@@ -110,8 +136,7 @@ def settings() -> None:
     Implementation features:
     - Uses `grab_set()` to block interaction with the main window.
     - Dynamically updates Combobox lists to prevent selecting the same keys.
-    - When saving, updates `config.ini` and initiates an application restart
-    to apply the changes.
+    - When saving, updates `config.ini` and root GUI.
     """
     settings_window = Toplevel()
     settings_window.title("Settings")
@@ -161,6 +186,9 @@ def settings() -> None:
     f_keys = [f"F{num}" for num in range(1, 13)]
 
     def update_menus(event=None) -> None:
+        """
+        Prevents selecting two identical keys.
+        """
         b = settings_window.backup_var.get()
         r = settings_window.restore_var.get()
         e = settings_window.exit_var.get()
@@ -214,9 +242,8 @@ def settings() -> None:
         with open(CONFIG_FILE, "w") as settingsfile:
             CONFIG.write(settingsfile)
 
+        load_config()
         settings_window.destroy()
-
-        os.execl(sys.executable, sys.executable, *sys.argv)
 
     # Buttons
     btn_frame = ttk.Frame(settings_window, padding=(5, 10, 5, 5))
@@ -238,41 +265,37 @@ root.title("Bloodborne Save Manager")
 root.iconbitmap(resource_path("images/bsm_icon.ico"))
 root.resizable(False, False)
 
+# Main frame
 mainframe = ttk.Frame(root, padding=(5, 10, 5, 10))
 mainframe.grid(column=0, row=0, sticky="N W E S")
-
-button_frame = ttk.Frame(root, padding=(30, 10, 30, 10))
-button_frame.grid(column=0, row=1, sticky="N W E S")
 
 logo_open = Image.open(resource_path("images/bsm_logo.jpg"))
 logo_resized = logo_open.resize((300, 100))
 logo_tk = ImageTk.PhotoImage(logo_resized)
-
-key_info = (
-    f"Press '{HOTKEYS["backup"].upper()}' to backup save files\n"
-    f"Press '{HOTKEYS["restore"].upper()}' to restore save files"
-)
-ttk.Label(mainframe, text=key_info, image=logo_tk, compound="top").grid(
-    column=1, row=0, columnspan=2
-)
+info_label = ttk.Label(mainframe, text="", image=logo_tk, compound="top")
+info_label.grid(column=1, row=0, columnspan=2)
 
 status_label = Label(mainframe, text="")
 status_label.grid(column=1, row=1, columnspan=2, pady=10)
 
-ttk.Button(button_frame, text="BackUp", command=backup_save).grid(
-    column=1, row=2, sticky="W"
-)
-ttk.Button(button_frame, text="Restore", command=restore_save).grid(
-    column=2, row=2
-)
-ttk.Button(button_frame, text="Settings", command=settings).grid(
-    column=3, row=2, sticky="E"
-)
+# Buttons frame
+button_frame = ttk.Frame(root, padding=(30, 10, 30, 10))
+button_frame.grid(column=0, row=1, sticky="N W E S")
+
+btn_backup = ttk.Button(button_frame, text="BackUp", command=backup_save)
+btn_backup.grid(column=1, row=2, sticky="W")
+btn_restore = ttk.Button(button_frame, text="Restore", command=restore_save)
+btn_restore.grid(column=2, row=2)
+btn_settings = ttk.Button(button_frame, text="Settings", command=open_settings_window)
+btn_settings.grid(column=3, row=2, sticky="E")
 
 root.columnconfigure(0, weight=1)
 root.rowconfigure(0, weight=1)
 mainframe.columnconfigure(2, weight=1)
 button_frame.columnconfigure(2, weight=1)
+
+
+load_config()
 
 
 def on_press(key_in: keyboard.Key | keyboard.KeyCode) -> None:
