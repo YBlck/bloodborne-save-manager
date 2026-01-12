@@ -286,7 +286,9 @@ btn_backup = ttk.Button(button_frame, text="BackUp", command=backup_save)
 btn_backup.grid(column=1, row=2, sticky="W")
 btn_restore = ttk.Button(button_frame, text="Restore", command=restore_save)
 btn_restore.grid(column=2, row=2)
-btn_settings = ttk.Button(button_frame, text="Settings", command=open_settings_window)
+btn_settings = ttk.Button(
+    button_frame, text="Settings", command=open_settings_window
+)
 btn_settings.grid(column=3, row=2, sticky="E")
 
 root.columnconfigure(0, weight=1)
